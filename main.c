@@ -33,7 +33,7 @@ QUEUE_MODE _mode_;
 snum_t _output_ctrl_;
 
 // Source number in each category
-int _source_num_[ALLTYPE] = {18, 15, 15};
+int _source_num_[ALLTYPE] = {40, 40, 40};
 
 // Only for WFQ mode
 float _set_weight_[ALLTYPE] = {0.5, 0.3, 0.2};
@@ -149,7 +149,7 @@ void packet_left_in_system(void)
 }
 
 void init(void) {
-    _mode_ = FIFO;
+    _mode_ = WFQ;
     
     _output_ctrl_ = 0;
     
@@ -517,13 +517,13 @@ int read_config(void) {
         if MATCH(__VIDEO_SECTION__, __BIT_RATE_KEY__) bps[VIDEO] = atoi(value);
         if MATCH(__VIDEO_SECTION__, __PACKET_SIZE_KEY__) packet_size[VIDEO] = atof(value);
         if MATCH(__VIDEO_SECTION__, __AVERAGE_ONTIME_KEY__) mean_on[VIDEO] = atof(value);
-        if MATCH(__VIDEO_SECTION__, __AVERAGE_OFFTIME_KEY__) mean_off[AUDIO] = atof(value);
+        if MATCH(__VIDEO_SECTION__, __AVERAGE_OFFTIME_KEY__) mean_off[VIDEO] = atof(value);
 
         // Parse key-value pairs in data section
         if MATCH(__DATA_SECTION__, __BIT_RATE_KEY__) bps[DATA] = atoi(value);
         if MATCH(__DATA_SECTION__, __PACKET_SIZE_KEY__) packet_size[DATA] = atof(value);
         if MATCH(__DATA_SECTION__, __AVERAGE_ONTIME_KEY__) mean_on[DATA] = atof(value);
-        if MATCH(__DATA_SECTION__, __AVERAGE_OFFTIME_KEY__) mean_off[AUDIO] = atof(value);
+        if MATCH(__DATA_SECTION__, __AVERAGE_OFFTIME_KEY__) mean_off[DATA] = atof(value);
 
         // Parse key-value pairs in queue section
         if MATCH(__QUEUE_SECTION__, __MAX_SIZE_KEY__) max_queue_size = atoi(value);
