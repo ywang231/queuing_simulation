@@ -22,7 +22,7 @@ void time_tick(void);
 void init(void);
 bool double_equal(double, double);
 void print_sim_data(void);
-void calculate_data_in_system(void);
+void packet_left_in_system(void);
 
 Server _server_;
 Queue* _queue_ = NULL;
@@ -50,7 +50,7 @@ int main(int argc, char const *argv[]) {
     while (_sim_.sim_time < _sim_.max_sim_time)
     {
         if (_output_ctrl_ > _sim_.output_interval) {
-            calculate_data_in_system();
+            packet_left_in_system();
             print_sim_data();
             _output_ctrl_ = 0;
         }
@@ -77,16 +77,16 @@ int main(int argc, char const *argv[]) {
 void print_sim_data(void) {
     
     printf("-----------------------Sim time: %.4f------------------------------\n", _sim_.sim_time);
-    printf("Package served (audio, video, data): %ld, %ld, %ld \n",
+    printf("Packet served (audio, video, data): %ld, %ld, %ld \n",
            _sim_.class_served[AUDIO],
            _sim_.class_served[VIDEO],
            _sim_.class_served[DATA]);
-    printf("Package arrived (audio, video, data): %ld, %ld, %ld \n",
+    printf("Packet arrived (audio, video, data): %ld, %ld, %ld \n",
            _sim_.class_arrived[AUDIO],
            _sim_.class_arrived[VIDEO],
            _sim_.class_arrived[DATA]);
     
-    printf("Package delayed (audio, video, data): %ld, %ld, %ld \n",
+    printf("Packet delayed (audio, video, data): %ld, %ld, %ld \n",
            _sim_.class_delayed[AUDIO],
            _sim_.class_delayed[VIDEO],
            _sim_.class_delayed[DATA]);
@@ -97,19 +97,19 @@ void print_sim_data(void) {
            _sim_.class_dropped[VIDEO],
            _sim_.class_dropped[DATA]);
 
-    printf("Package served kbs (audio, video, data): %0.4Lf, %0.4Lf, %0.4Lf \n",
+    printf("Packet served in kb (audio, video, data): %0.4Lf, %0.4Lf, %0.4Lf \n",
            _sim_.class_served_kb[AUDIO],
            _sim_.class_served_kb[VIDEO],
            _sim_.class_served_kb[DATA]);
     
-    printf("Package remained (audio, video, data): %ld, %ld, %ld \n",
+    printf("Packet remained (audio, video, data): %ld, %ld, %ld \n",
            _sim_.class_remained[AUDIO],
            _sim_.class_remained[VIDEO],
            _sim_.class_remained[DATA]);
     
-    printf("Total served pakckage kb: %0.4Lf \n", _sim_.total_served_kb);
+    printf("Total served packet in kb: %0.4Lf \n", _sim_.total_served_kb);
     
-    lfnum_t totoal_served_kb = _sim_.total_served_kb <= 0 ? 0 : _sim_.total_served_kb;
+    lfnum_t totoal_served_kb = _sim_.total_served_kb <= 0 ? 10 : _sim_.total_served_kb;
     
     printf("Percentage of Served (audio, video, data): %0.4Lf, %0.4Lf, %0.4Lf \n",
            _sim_.class_served_kb[AUDIO] / totoal_served_kb,
@@ -117,10 +117,9 @@ void print_sim_data(void) {
            _sim_.class_served_kb[DATA] / totoal_served_kb);
 }
 
-void calculate_data_in_system(void)
+void packet_left_in_system(void)
 {
     int i;
-    
     for (i = 0; i < ALLTYPE; ++i) {
         _sim_.class_remained[i] = 0;
     }
@@ -410,6 +409,7 @@ void depart(void) {
         p->serve_start_time = _next_event_.event_time;
         _server_.packet_in_process = p;
         _server_.status = BUSY;
+        _sim_.class_delayed[p->type] += 1;
     }
     else {
         _server_.status = IDLE;
@@ -441,6 +441,10 @@ void arrive(void) {
             ps->serve_start_time = _next_event_.event_time;
             _server_.status = BUSY;
             _server_.packet_in_process = ps;
+        }
+        
+        if (ps != p) {
+            _sim_.class_delayed[ps->type] += 1;
         }
     }
 }
