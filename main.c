@@ -34,7 +34,7 @@ QUEUE_MODE _mode_;
 snum_t _output_ctrl_;
 
 // Source number in each category
-int _source_num_[ALLTYPE] = {100, 100, 100};
+int _source_num_[ALLTYPE] = {40, 40, 40};
 
 // Only for WFQ mode
 float _set_weight_[ALLTYPE] = {0.5, 0.3, 0.2};
@@ -681,9 +681,9 @@ int read_config(void) {
     int i = 0, j = 0, assigned = 0;
     for (i = 0; i < ALLTYPE; ++i) {
         for (j = 0; j < _source_num_[i]; ++j) {
-            _em_[assigned + j].arrival_time = 0;
+            _em_[assigned + j].arrival_time = expon(mean_off[i]);
             _em_[assigned + j].arrival_num = 0;
-            _em_[assigned + j].on_time_start = 0;
+            _em_[assigned + j].on_time_start = _em_[assigned + j].arrival_time;
             _em_[assigned + j].on_time = expon(mean_on[i]);
             _em_[assigned + j].off_time= expon(mean_off[i]);;
             _em_[assigned + j].mean_on = mean_on[i];
