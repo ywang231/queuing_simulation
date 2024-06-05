@@ -23,6 +23,7 @@ void init(void);
 bool double_equal(double, double);
 void print_sim_data(void);
 void packet_left_in_system(void);
+void accumulated_queue_length(void);
 
 Server _server_;
 Queue* _queue_ = NULL;
@@ -33,7 +34,7 @@ QUEUE_MODE _mode_;
 snum_t _output_ctrl_;
 
 // Source number in each category
-int _source_num_[ALLTYPE] = {50, 50, 50};
+int _source_num_[ALLTYPE] = {100, 100, 100};
 
 // Only for WFQ mode
 float _set_weight_[ALLTYPE] = {0.5, 0.3, 0.2};
@@ -49,6 +50,9 @@ int main(int argc, char const *argv[]) {
     // Start the simulation
     while (_sim_.sim_time < _sim_.max_sim_time)
     {
+        _sim_.event_num += 1;
+        accumulated_queue_length();
+        
         if (_output_ctrl_ > _sim_.output_interval) {
             packet_left_in_system();
             print_sim_data();
@@ -72,6 +76,21 @@ int main(int argc, char const *argv[]) {
     }
     
     return 0;
+}
+
+// Calculate the length of queue for each category
+void accumulated_queue_length(void)
+{
+    if (_mode_ == FIFO) {
+        _sim_.class_queue_len[AUDIO] += _queue_->size_kb;
+    }
+    else {
+        int i;
+        for (i = 0; i < ALLTYPE; ++i) {
+            Queue* q = _queue_ + i;
+            _sim_.class_queue_len[q->type] += q->size_kb;
+        }
+    }
 }
 
 void print_sim_data(void) {
@@ -163,6 +182,12 @@ void print_sim_data(void) {
                _sim_.class_res_time[DATA]);
         
         
+        printf("Average Queue Length in KB (audio, video, data ): %.4Lf, %.4Lf, %.4Lf \n",
+               _sim_.class_queue_len[AUDIO] / _sim_.event_num,
+               _sim_.class_queue_len[VIDEO] / _sim_.event_num,
+               _sim_.class_queue_len[DATA] / _sim_.event_num);
+        
+        
     }
     else {
         printf("Packet served : %ld \n",
@@ -198,6 +223,9 @@ void print_sim_data(void) {
         printf("Average Response time (total): %.4Lf \n", total_res_time / total_packet_servedd);
         
         printf("Response time (audio, video, data): %.4Lf \n",total_res_time);
+        
+        printf("Average Queue Length in KB: %.4Lf \n",
+               _sim_.class_queue_len[AUDIO] / _sim_.event_num);
         
     }
     printf("\n");
@@ -235,7 +263,7 @@ void packet_left_in_system(void)
 }
 
 void init(void) {
-    _mode_ = WFQ;
+    _mode_ = FIFO;
     
     _output_ctrl_ = 0;
     
@@ -263,6 +291,8 @@ void init(void) {
         _sim_.class_remained[i] = 0;
         _sim_.class_res_time[i] = 0.0f;
         _sim_.class_delay_time[i] = 0.0f;
+        _sim_.class_queue_len[i] = 0.0f;
+        _sim_.event_num = 0;
     }
 }
 

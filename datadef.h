@@ -156,10 +156,13 @@ typedef struct  {
     lfnum_t total_delay_time;
     lfnum_t class_delay_time[ALLTYPE];
     lfnum_t class_res_time[ALLTYPE];
+    
+    num_t event_num;
+    lfnum_t class_queue_len[ALLTYPE];
 } Sim;
 
 #ifdef __cplusplus
-}
+
 #endif
 
 #endif // __DATATYPE_H__
