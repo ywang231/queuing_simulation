@@ -132,7 +132,7 @@ struct BitEmitter {
     fnum_t on_time; // Follow the exponential distribution
     fnum_t off_time; // Follow the exponential distribution
     num_t arrival_num;
-    fnum_t arraval_time;
+    fnum_t arrival_time;
     num_t total_sources;
     EmitterPop pop;
     EmitterTick tick;
@@ -154,6 +154,8 @@ typedef struct  {
     snum_t output_interval;
     fnum_t max_sim_time;
     lfnum_t total_delay_time;
+    lfnum_t class_delay_time[ALLTYPE];
+    lfnum_t class_res_time[ALLTYPE];
 } Sim;
 
 #ifdef __cplusplus

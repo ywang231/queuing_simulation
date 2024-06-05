@@ -33,7 +33,7 @@ QUEUE_MODE _mode_;
 snum_t _output_ctrl_;
 
 // Source number in each category
-int _source_num_[ALLTYPE] = {40, 40, 40};
+int _source_num_[ALLTYPE] = {50, 50, 50};
 
 // Only for WFQ mode
 float _set_weight_[ALLTYPE] = {0.5, 0.3, 0.2};
@@ -76,52 +76,131 @@ int main(int argc, char const *argv[]) {
 
 void print_sim_data(void) {
     
-    printf("-----------------------Sim time: %.4f------------------------------\n", _sim_.sim_time);
-    printf("Packet served (audio, video, data): %ld, %ld, %ld \n",
-           _sim_.class_served[AUDIO],
-           _sim_.class_served[VIDEO],
-           _sim_.class_served[DATA]);
-    printf("Packet arrived (audio, video, data): %ld, %ld, %ld \n",
-           _sim_.class_arrived[AUDIO],
-           _sim_.class_arrived[VIDEO],
-           _sim_.class_arrived[DATA]);
+    char* mode = "FIFO";
+    if (_mode_ == SPQ) {
+        mode = "Strict Priority Queue";
+    }
+    else if (_mode_== FIFO) {
+        mode = "FIFO";
+    }
+    else {
+        mode = "Weight Fair Queue";
+    }
     
-    printf("Packet delayed (audio, video, data): %ld, %ld, %ld \n",
-           _sim_.class_delayed[AUDIO],
-           _sim_.class_delayed[VIDEO],
-           _sim_.class_delayed[DATA]);
-    
-    
-    printf("Package dropped (audio, video, data): %ld, %ld, %ld \n",
-           _sim_.class_dropped[AUDIO],
-           _sim_.class_dropped[VIDEO],
-           _sim_.class_dropped[DATA]);
-
-    printf("Packet served in kb (audio, video, data): %0.4Lf, %0.4Lf, %0.4Lf \n",
-           _sim_.class_served_kb[AUDIO],
-           _sim_.class_served_kb[VIDEO],
-           _sim_.class_served_kb[DATA]);
-    
-    printf("Packet remained (audio, video, data): %ld, %ld, %ld \n",
-           _sim_.class_remained[AUDIO],
-           _sim_.class_remained[VIDEO],
-           _sim_.class_remained[DATA]);
+    printf("----------Mode: %s---------Sim time: %.4f-----------------\n",
+           mode, _sim_.sim_time);
     
     printf("Total served packet in kb: %0.4Lf \n", _sim_.total_served_kb);
     
-    lfnum_t totoal_served_kb = _sim_.total_served_kb <= 0 ? 10 : _sim_.total_served_kb;
     
+    lfnum_t totoal_served_kb = _sim_.total_served_kb <= 0 ? 10 : _sim_.total_served_kb;
     printf("Percentage of Served (audio, video, data): %0.4Lf, %0.4Lf, %0.4Lf \n",
            _sim_.class_served_kb[AUDIO] / totoal_served_kb,
            _sim_.class_served_kb[VIDEO] / totoal_served_kb,
            _sim_.class_served_kb[DATA] / totoal_served_kb);
+
     
-    num_t total_packet_delayed = _sim_.class_delayed[AUDIO] + _sim_.class_delayed[VIDEO] + _sim_.class_delayed[DATA];
+    if (_mode_ != FIFO) {
+        
+        printf("Packet arrived (audio, video, data): %ld, %ld, %ld \n",
+               _sim_.class_arrived[AUDIO],
+               _sim_.class_arrived[VIDEO],
+               _sim_.class_arrived[DATA]);
+        
+        
+        printf("Packet served (audio, video, data): %ld, %ld, %ld \n",
+               _sim_.class_served[AUDIO],
+               _sim_.class_served[VIDEO],
+               _sim_.class_served[DATA]);
+        
+        printf("Packet delayed (audio, video, data): %ld, %ld, %ld \n",
+               _sim_.class_delayed[AUDIO],
+               _sim_.class_delayed[VIDEO],
+               _sim_.class_delayed[DATA]);
+        
+        printf("Package dropped (audio, video, data): %ld, %ld, %ld \n",
+               _sim_.class_dropped[AUDIO],
+               _sim_.class_dropped[VIDEO],
+               _sim_.class_dropped[DATA]);
+        
+        printf("Packet remained (audio, video, data): %ld, %ld, %ld \n",
+               _sim_.class_remained[AUDIO],
+               _sim_.class_remained[VIDEO],
+               _sim_.class_remained[DATA]);
+        
+        
+        printf("Packet served in kb (audio, video, data): %0.4Lf, %0.4Lf, %0.4Lf \n",
+               _sim_.class_served_kb[AUDIO],
+               _sim_.class_served_kb[VIDEO],
+               _sim_.class_served_kb[DATA]);
+        
+        lfnum_t average_delay[ALLTYPE] = {
+            _sim_.class_delay_time[AUDIO] / (_sim_.class_delayed[AUDIO] <= 0 ? 10 : _sim_.class_delayed[AUDIO]),
+            _sim_.class_delay_time[VIDEO] / (_sim_.class_delayed[VIDEO] <= 0 ? 10 : _sim_.class_delayed[VIDEO]),
+            _sim_.class_delay_time[DATA] / (_sim_.class_delayed[DATA] <= 0 ? 10 : _sim_.class_delayed[DATA])
+        };
+        
+        printf("Average delayed time (audio, video, data) : %.4Lf, %.4Lf, %.4Lf \n",
+               average_delay[AUDIO],
+               average_delay[VIDEO],
+               average_delay[DATA]);
+        
+        
+        printf("Packet blocking ratio (audio, video, data) :  %.4Lf, %.4Lf, %.4Lf \n",
+               _sim_.class_dropped[AUDIO] * 1.0l / _sim_.class_arrived[AUDIO],
+               _sim_.class_dropped[VIDEO] * 1.0l / _sim_.class_arrived[VIDEO],
+               _sim_.class_dropped[DATA] * 1.0l/ _sim_.class_arrived[DATA]);
+        
+        
+        printf("Average response time (audio, video, data): %.4Lf, %.4Lf, %.4Lf \n",
+               _sim_.class_res_time[AUDIO] / _sim_.class_served[AUDIO],
+               _sim_.class_res_time[VIDEO] / _sim_.class_served[VIDEO],
+               _sim_.class_res_time[DATA] / _sim_.class_served[DATA]);
+        
+        printf("Response time (audio, video, data): %.4Lf, %.4Lf, %.4Lf \n",
+               _sim_.class_res_time[AUDIO],
+               _sim_.class_res_time[VIDEO],
+               _sim_.class_res_time[DATA]);
+        
+        
+    }
+    else {
+        printf("Packet served : %ld \n",
+               _sim_.class_served[AUDIO] + _sim_.class_served[VIDEO] + _sim_.class_served[DATA]);
+        
+        printf("Packet arrived : %ld \n",
+               _sim_.class_arrived[AUDIO] + _sim_.class_arrived[VIDEO] + _sim_.class_arrived[DATA]);
+        
+        printf("Packet delayed : %ld \n",
+               _sim_.class_delayed[AUDIO] + _sim_.class_delayed[VIDEO] + _sim_.class_delayed[DATA]);
+        
+        printf("Package dropped : %ld \n",
+               _sim_.class_dropped[AUDIO] + _sim_.class_dropped[VIDEO] + _sim_.class_dropped[DATA]);
+        
+        printf("Packet remained: %ld \n",
+               _sim_.class_remained[AUDIO] + _sim_.class_remained[VIDEO] + _sim_.class_remained[DATA]);
+        
+        
+        num_t total_dropped = _sim_.class_dropped[AUDIO] + _sim_.class_dropped[VIDEO] + _sim_.class_dropped[DATA];
+        num_t total_arrived = _sim_.class_arrived[AUDIO] + _sim_.class_arrived[VIDEO] + _sim_.class_arrived[DATA];
+        printf("Packet blocking ratio :  %.4Lf \n", total_dropped * 1.0l / total_arrived);
+        
+        num_t total_packet_delayed = _sim_.class_delayed[AUDIO] + _sim_.class_delayed[VIDEO] + _sim_.class_delayed[DATA];
+        
+        lfnum_t average_delayed_time = total_packet_delayed <= 0 ? 0 :_sim_.total_delay_time / total_packet_delayed;
+        
+        printf("Delayed time: %0.4Lf, average dalayed time: %0.4Lf \n",
+               _sim_.total_delay_time, average_delayed_time);
+        
     
-    lfnum_t average_delayed_time = total_packet_delayed <= 0 ? 0 :_sim_.total_delay_time / total_packet_delayed;
-    
-    printf("Total delayed time: %0.4Lf, average dalayed time: %0.4Lf \n",
-           _sim_.total_delay_time, average_delayed_time);
+        lfnum_t total_res_time = _sim_.class_res_time[AUDIO] + _sim_.class_res_time[VIDEO] + _sim_.class_res_time[DATA];
+        num_t total_packet_servedd = _sim_.class_served[AUDIO] + _sim_.class_served[VIDEO] + _sim_.class_served[DATA];
+        printf("Average Response time (total): %.4Lf \n", total_res_time / total_packet_servedd);
+        
+        printf("Response time (audio, video, data): %.4Lf \n",total_res_time);
+        
+    }
+    printf("\n");
 }
 
 void packet_left_in_system(void)
@@ -182,6 +261,8 @@ void init(void) {
         _sim_.class_delayed[i] = 0;
         _sim_.class_dropped[i] = 0;
         _sim_.class_remained[i] = 0;
+        _sim_.class_res_time[i] = 0.0f;
+        _sim_.class_delay_time[i] = 0.0f;
     }
 }
 
@@ -324,7 +405,7 @@ void emitter_tick(BitEmitter* em) {
 
     // Calculate the next packet arrival time
     double arrival_interval = em->packet_size_kb / em->bps;
-    double next_arrival_time = em->arraval_time + arrival_interval;
+    double next_arrival_time = em->arrival_time + arrival_interval;
     double off_time_start = em->on_time_start + em->on_time;
     // New packet arrival time is later than the off time, then update the on time
     if (next_arrival_time > off_time_start) {
@@ -340,10 +421,10 @@ void emitter_tick(BitEmitter* em) {
         }
         em->on_time = new_on_time;
         em->off_time = new_off_time;
-        em->arraval_time = em->on_time_start + extra_time_needed;
+        em->arrival_time = em->on_time_start + extra_time_needed;
     }
     else {
-        em->arraval_time = next_arrival_time;
+        em->arrival_time = next_arrival_time;
     }
     em->arrival_num = em->concur;
 }
@@ -358,7 +439,7 @@ Packet* emitter_pop(BitEmitter* em) {
     p->is_dropped = false;
     // Decrease the number of packets
     em->arrival_num--;
-    p->arrival_time = em->arraval_time;
+    p->arrival_time = em->arrival_time;
     return p;
 }
 
@@ -373,7 +454,7 @@ void time_tick(void) {
     // Find the emitter with the earliest packet arrived
     BitEmitter* em_earliest = _em_;
     for (i = 0; i < _em_->total_sources; ++i) {
-        if (em_earliest->arraval_time > _em_[i].arraval_time) {
+        if (em_earliest->arrival_time > _em_[i].arrival_time) {
             em_earliest = _em_ + i;
         }
     }
@@ -382,13 +463,13 @@ void time_tick(void) {
     if (BUSY == _server_.status) {
         double serve_duration = _server_.packet_in_process->size_kb / _server_.serve_speed;
         double next_depart_time = _server_.packet_in_process->serve_start_time + serve_duration;
-        if (next_depart_time < em_earliest->arraval_time) {
+        if (next_depart_time < em_earliest->arrival_time) {
             _next_event_.event_time = next_depart_time;
             _next_event_.type = DEPART;
             return;
         }
     }
-    _next_event_.event_time = em_earliest->arraval_time;
+    _next_event_.event_time = em_earliest->arrival_time;
     _next_event_.type = ARRIVAL;
     _next_event_.data_related = em_earliest;
 }
@@ -411,6 +492,11 @@ void depart(void) {
         
         _sim_.class_served_kb[_server_.packet_in_process->type] += _server_.packet_in_process->size_kb;
         _sim_.total_served_kb += _server_.packet_in_process->size_kb;
+        
+        lfnum_t res_time = _server_.packet_in_process->depart_time - _server_.packet_in_process->arrival_time;
+        
+        _sim_.class_res_time[_server_.packet_in_process->type] += res_time;
+        
         __FREE__(_server_.packet_in_process);
     }
     
@@ -422,6 +508,7 @@ void depart(void) {
         _server_.status = BUSY;
         _sim_.class_delayed[p->type] += 1;
         _sim_.total_delay_time += (p->serve_start_time - p->arrival_time);
+        _sim_.class_delay_time[p->type] += (p->serve_start_time - p->arrival_time);
     }
     else {
         _server_.status = IDLE;
@@ -454,13 +541,19 @@ void arrive(void) {
             _server_.status = BUSY;
             _server_.packet_in_process = ps;
             _sim_.total_delay_time += (p->serve_start_time - p->arrival_time);
+            _sim_.class_delay_time[p->type] += (p->serve_start_time - p->arrival_time);
         }
-        
+    
+        // Packets popped and pushed are not the same one.
+        // Therefore, there is a delay happened.
         if (ps != p) {
             _sim_.class_delayed[ps->type] += 1;
         }
     }
 }
+
+
+
 
 #pragma read configuration
 
@@ -478,6 +571,7 @@ void arrive(void) {
 #define __SERVER_SECTION__      "Server"
 #define __SERVE_RATE_KEY__      "serve_rate"
 #define __STATIS_SECTION__      "Sim"
+
 #define __STATIS_OUTPUT_INTERVAL__ "output_interval"
 #define __STATIS_MAX_SIM_TIME__    "max_sim_time"
 
@@ -557,7 +651,7 @@ int read_config(void) {
     int i = 0, j = 0, assigned = 0;
     for (i = 0; i < ALLTYPE; ++i) {
         for (j = 0; j < _source_num_[i]; ++j) {
-            _em_[assigned + j].arraval_time = 0;
+            _em_[assigned + j].arrival_time = 0;
             _em_[assigned + j].arrival_num = 0;
             _em_[assigned + j].on_time_start = 0;
             _em_[assigned + j].on_time = expon(mean_on[i]);
