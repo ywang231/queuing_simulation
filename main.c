@@ -115,6 +115,13 @@ void print_sim_data(void) {
            _sim_.class_served_kb[AUDIO] / totoal_served_kb,
            _sim_.class_served_kb[VIDEO] / totoal_served_kb,
            _sim_.class_served_kb[DATA] / totoal_served_kb);
+    
+    num_t total_packet_delayed = _sim_.class_delayed[AUDIO] + _sim_.class_delayed[VIDEO] + _sim_.class_delayed[DATA];
+    
+    lfnum_t average_delayed_time = total_packet_delayed <= 0 ? 0 :_sim_.total_delay_time / total_packet_delayed;
+    
+    printf("Total delayed time: %0.4Lf, average dalayed time: %0.4Lf \n",
+           _sim_.total_delay_time, average_delayed_time);
 }
 
 void packet_left_in_system(void)
@@ -165,6 +172,8 @@ void init(void) {
     _sim_.max_sim_time = 0.0f;
     _sim_.total_served_kb = 0.0f;
     _sim_.output_interval = 0;
+    _sim_.total_delay_time = 0.0f;
+    
     int i;
     for (i = 0; i < ALLTYPE; ++i) {
         _sim_.class_arrived[i] = 0;
@@ -231,8 +240,10 @@ Queue* get_proper_pop_spq(void) {
 }
 
 typedef struct  {
+    
     SOURCE_TYPE type;
     fnum_t off_set;
+    
 } OffsetWeight;
 
 int offset_cmp_func(const void* a, const void* b) {
@@ -410,6 +421,7 @@ void depart(void) {
         _server_.packet_in_process = p;
         _server_.status = BUSY;
         _sim_.class_delayed[p->type] += 1;
+        _sim_.total_delay_time += (p->serve_start_time - p->arrival_time);
     }
     else {
         _server_.status = IDLE;
@@ -441,6 +453,7 @@ void arrive(void) {
             ps->serve_start_time = _next_event_.event_time;
             _server_.status = BUSY;
             _server_.packet_in_process = ps;
+            _sim_.total_delay_time += (p->serve_start_time - p->arrival_time);
         }
         
         if (ps != p) {

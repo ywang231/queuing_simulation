@@ -153,6 +153,7 @@ typedef struct  {
     num_t class_remained[ALLTYPE];
     snum_t output_interval;
     fnum_t max_sim_time;
+    lfnum_t total_delay_time;
 } Sim;
 
 #ifdef __cplusplus
