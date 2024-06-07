@@ -41,7 +41,6 @@ int main(int argc, char const *argv[])
 
 
 /**************************************************************************************************/
-
 #define SEC_KEY_CMP(s, k) if(strcmp(section, s) == 0 && strcmp(key, k) == 0)
 
 int read_params(void)
@@ -114,10 +113,7 @@ int read_params(void)
         fclose(f);
         f = NULL;
     }
-
     gsys_.queue = (Queue*)(gc_.qmode == QFIFO ? malloc(sizeof(Queue)) : malloc(sizeof(Queue) * type_num));
-    
-
     
     // Initialize all the source generator
     int i, total_source = 0;
@@ -144,7 +140,6 @@ int read_params(void)
         }
         assigned += _source_num_[i];
     }
-    
     
     // Single queue
     if (_mode_ == FIFO) {
@@ -409,234 +404,184 @@ void packet_left_in_system(void)
     }
 }
 
-bool append(Queue* que, Packet* p) 
+int add_packet_to_queue(BitPack* p)
 {
-    
-    Queue* target_queue = que;
-    
-    // For SPQ and WFQ, find the right queue to add
-    if (_mode_ != FIFO) {
+    Queue* target_to_add = gsys_.queue;
+    const int type_num = 3;
+    if (gc_.qmode != QFIFO) {
         int i;
-        for (i = 0; i < ALLTYPE; ++i) {
-            if (p->type == (que + i)->type) {
-                target_queue = que + i;
-                break;;
+        for (i = 0; i < type_num; ++i) {
+            if (p->type == gsys_.queue[i].type) {
+                target_to_add = gsys_.queue + i;
+                break;
             }
         }
     }
-    
-    // Check if the queue is full
-    if ((target_queue->size_kb + p->size_kb) > target_queue->max_size_kb) {
-        p->is_dropped = true;
-        return false;
+    // Queue reaches its capacity
+    if (target_to_add->len == target_to_add->max_len) {
+        p->dropped = 1;
+        return 0;
     }
     
-    // Append the packet to the queue
-    if (NULL == target_queue->head) {
-        target_queue->head = p;
-        target_queue->size_kb = p->size_kb;
+    // Queue is empty
+    if (NULL == target_to_add->pack_head) {
+        target_to_add->pack_head = p;
+        target_to_add->len = 1;
     }
     else {
-        Packet* current = target_queue->head;
-        while (current->next != NULL) {
-            current = current->next;
+        BitPack* cur = target_to_add->pack_head;
+        while (cur->next != NULL) {
+            cur = cur->next;
         }
-        current->next = p;
-        target_queue->size_kb += p->size_kb;
+        cur->next = p;
+        target_to_add->len += 1;
     }
-    return true;
+    return 1;
 }
 
-Queue* get_proper_pop_fifo(void) {
-    return _queue_;
+// Comparsion func for qsort
+int abs_cmp(const void* aw1, const void* aw2) {
+    float a = ((AbsWeight*)aw1)->abs_weight;
+    float b = ((AbsWeight*)aw2)->abs_weight;
+    return a < b ? 1 : -1;
 }
 
-Queue* get_proper_pop_spq(void) {
-    Queue* q = _queue_;
+Queue* find_queue_of_wfq(void) {
+    const int type_num = 3;
+    AbsWeight off_weight[type_num];
     int i;
-    for (i = 0; i < ALLTYPE; ++i) {
-        if ((_queue_ + i)->head) {
-            q = _queue_ + i;
-            break;;
-        }
+    
+    lfnum_t total_served_kb =  cll_. <= 0.0f ?  2.0f :  _sim_.total_served_kb;
+    for (i = 0; i < type_num; ++i) {
+        off_weight[i].type = i;
+        off_weight[i].abs_weight = gc_.weight_sets[i] - (_sim_.class_served_kb[i] / total_served_kb);
+    }
+    
+    // Sorted by descent
+    qsort(off_weight, type_num, sizeof(AbsWeight), abs_cmp);
+    
+    Queue* q = gsys_.queue;
+    for (i = 0; i < type_num; ++i) {
+        Queue* cq = q + off_weight[i];
+        if (cq->pack_head) return cq;
     }
     return q;
 }
 
-typedef struct  {
-    
-    SOURCE_TYPE type;
-    fnum_t off_set;
-    
-} OffsetWeight;
-
-int offset_cmp_func(const void* a, const void* b) {
-    
-    fnum_t oa = ((OffsetWeight*)a)->off_set;
-    fnum_t ob = ((OffsetWeight*)b)->off_set;
-    
-    return oa < ob ? 1 : -1;
-}
-
-Queue* get_proper_pop_wfq(void) {
-    
-    OffsetWeight ow[ALLTYPE];
-    
-    lfnum_t total_served_kb =  _sim_.total_served_kb <= 0.0f ?  2.0f :  _sim_.total_served_kb;
+Queue* find_right_queue(void)
+{
+    Queue* q = gsys_.queue;
     int i;
-    for (i = 0; i < ALLTYPE; ++i) {
-        ow[i].type = i;
-        ow[i].off_set = _set_weight_[i] - (_sim_.class_served_kb[i] / total_served_kb);
-    }
-    
-    // Offset sorted by descent
-    qsort(ow, ALLTYPE, sizeof(OffsetWeight), offset_cmp_func);
-    
-    // Find the right queue
-    Queue* q = _queue_;
-    // Find the right queue
-    for (i = 0; i < ALLTYPE; ++i) {
-        if (_queue_[ow[i].type].head) {
-            q = _queue_ + ow[i].type;
-            break;
-        }
-    }
+    const int type_num = 3;
+    if(QFIFO == gc_.qmode) return gsys_.queue;
+    else if (QSPQ == gc_.qmode)
+        for (i = 0; i < type_num; ++i) if (q[i].pack_head) return q + i;
+    else
+        q = find_queue_of_wfq();
     return q;
 }
 
-
-// Find the right queue to get packet from
-Queue* find_queue(void) {
-    Queue* q = _queue_;
-    
-    switch (_mode_) {
-        case SPQ: {
-            q = get_proper_pop_spq();
-            break;
-        }
-        case WFQ: {
-            q = get_proper_pop_wfq();
-            break;
-        }
-        default:
-            break;
-    }
-    return q;
-}
-
-// Get the first packet from the queue
-Packet* pop(Queue* queue) {
-    Queue* q = find_queue();
-    
-    // If the queue is empty
-    if (!q->head ) {
+// Remove the first packet in the queue
+BitPack* get_pack_from_queue(void) {
+    Queue* q = find_right_queue();
+    if (NULL == q->pack_head ) {
         return NULL;
     }
-    // Pop the packet from the head of the queue
-    Packet* p = q->head;
-    q->head = p->next;
+    
+    BitPack* pack = q->pack_head;
+    q->pack_head = pack->next;
 
-    // Update the current size of the queue
-    q->size_kb -= p->size_kb;
+    q->len -= 1;
     return p;
 }
 
 // Generate packets
-void emitter_tick(BitEmitter* em) {
-    // Check if there is packet waiting for processing
-    if (em->arrival_num > 0) return;
-
-    // Calculate the next packet arrival time
-    double arrival_interval = em->packet_size_kb / em->bps;
-    double next_arrival_time = em->arrival_time + arrival_interval;
-    double off_time_start = em->on_time_start + em->on_time;
-    // New packet arrival time is later than the off time, then update the on time
-    if (next_arrival_time > off_time_start) {
-        em->on_time_start = off_time_start + em->off_time;
-        double extra_time_needed = next_arrival_time - off_time_start;
-        double new_on_time = expon(em->mean_on);
-        double new_off_time = expon(em->mean_off);
-        while (new_on_time < extra_time_needed) {
-            extra_time_needed -= new_on_time;
-            em->on_time_start = em->on_time_start + new_on_time + new_off_time;
-            new_on_time = expon(em->mean_on);
-            new_off_time = expon(em->mean_off);
+void packgo_tick(PackGo* pg) {
+    if (pg->pack_num > 0) return;
+    
+    // Generate one packet
+    pg->arrival_num = 1;
+    
+    // Calculate the next time to arrive
+    double arri_interval = pg->size_byte / pg->bps;
+    double next_arrival_time = pg->time_go + arri_interval;
+    
+    double off_start = pg->on_start + pg->on_length;
+    if (next_arrival_time > off_start) {
+        pg->on_start = off_start + pg->off_length;
+        double extra_time_needed = next_arrival_time - off_start;
+        double new_on_length = expon(pg->mean_on);
+        double new_off_length = expon(pg->mean_off);
+        while (new_on_length < extra_time_needed) {
+            extra_time_needed -= new_on_length;
+            pg->on_start = pg->on_start + new_on_length + new_off_length;
+            new_on_length = expon(pg->mean_on);
+            new_off_length = expon(pg->mean_off);
         }
-        em->on_time = new_on_time;
-        em->off_time = new_off_time;
-        em->arrival_time = em->on_time_start + extra_time_needed;
+        pg->on_length = new_on_length;
+        pg->off_length = new_off_length;
+        pg->time_go = pg->on_start + extra_time_needed;
     }
     else {
-        em->arrival_time = next_arrival_time;
+        pg->time_go = next_arrival_time;
     }
-    em->arrival_num = em->concur;
 }
 
-
-Packet* emitter_pop(BitEmitter* em) {
-    Packet* p = NULL;
-    __MALLOC__(p, sizeof(Packet));
-    p->size_kb = em->packet_size_kb;
-    p->type = em->type;
+BitPack* send_pack_to_arrive(PackGo* pg) {
+    BitPack* p = (BitPack*)malloc(sizeof(BitPack));
+    p->size_byte = pg->size_byte;
+    p->time_arrival = pg->time_go;
+    p->type = pg->type;
+    p->dropped = 0;
     p->next = NULL;
-    p->is_dropped = false;
-    // Decrease the number of packets
-    em->arrival_num--;
-    p->arrival_time = em->arrival_time;
+    --pg->pack_num;
     return p;
 }
 
-
 void time_tick(void) {
-    // Tick all the source generators
     int i;
-    for (i = 0; i < _em_->total_sources; ++i) {
-        _em_->tick(_em_+i);
-    }
-    
-    // Find the emitter with the earliest packet arrived
-    BitEmitter* em_earliest = _em_;
-    for (i = 0; i < _em_->total_sources; ++i) {
-        if (em_earliest->arrival_time > _em_[i].arrival_time) {
-            em_earliest = _em_ + i;
+    PackGo* earliest = gpg_;
+    for (i = 0; i < gpg_->total_goers; ++i) {
+        packgo_tick(gpg_ + i);
+        if (earliest->time_go > gpg_[i].time_go) {
+            earliest = gpg_ + i;
         }
     }
     
-    // Server is Busy and depart time is earlier than next arrival time
-    if (BUSY == _server_.status) {
-        double serve_duration = _server_.packet_in_process->size_kb / _server_.serve_speed;
-        double next_depart_time = _server_.packet_in_process->serve_start_time + serve_duration;
-        if (next_depart_time < em_earliest->arrival_time) {
-            _next_event_.event_time = next_depart_time;
-            _next_event_.type = DEPART;
+    if (Busy == gsys_.server.state) {
+        double serve_len = gsys_.server.pack_in->size_byte / gsys_.server.serve_rate;
+        double next_depart = gsys_.server.pack_in->time_serve + serve_len;
+        if (next_depart < earliest->time_go) {
+            next_event_.time = next_depart;
+            next_event_.type = Departure;
             return;
         }
     }
-    _next_event_.event_time = em_earliest->arrival_time;
-    _next_event_.type = ARRIVAL;
-    _next_event_.data_related = em_earliest;
+    next_event_.time = earliest->time_go;
+    next_event_.type = Arrival;
+    next_event_.data = earliest;
     
+    // Set current simlation time to this event time
     cll_.ctime = next_event_.time;
 }
 
-
-
-
 #pragma depart and arrive
 void depart(void) {
-    // Finish the current being served packet
-    if (_server_.packet_in_process) {
-        _server_.packet_in_process->depart_time = _next_event_.event_time;
-        _sim_.class_served[ _server_.packet_in_process->type] += 1;
+    Server* serv = &gsys_.server;
+    if (Busy == serv->state) {
+        serv->pack_in->time_depart = next_event_.time;
+        cll_.served[serv->pack_in->type] += 1;
         
-        _sim_.class_served_kb[_server_.packet_in_process->type] += _server_.packet_in_process->size_kb;
-        _sim_.total_served_kb += _server_.packet_in_process->size_kb;
+//        _sim_.class_served_kb[_server_.packet_in_process->type] += _server_.packet_in_process->size_kb;
+//        _sim_.total_served_kb += _server_.packet_in_process->size_kb;
         
         lfnum_t res_time = _server_.packet_in_process->depart_time - _server_.packet_in_process->arrival_time;
         
         _sim_.class_res_time[_server_.packet_in_process->type] += res_time;
         
-        __FREE__(_server_.packet_in_process);
+        
+        free(serv->pack_in);
+        serv->pack_in = NULL;
     }
     
     // Get one packet from the queue

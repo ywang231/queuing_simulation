@@ -101,14 +101,30 @@ typedef struct {
     int       sources[3];     // The number of sources in each type
 } GConfig;
 
+// Only for Weight Fair Queue
+typedef struct  {
+    SourceType type;
+    float      abs_weight;
+} AbsWeight;
+
+
 double expon(double);
-void print_contrl(void);
-void init(void);
-int read_params(void);
-void depart(void);
-void arrive(void);
-void time_tick(void);
-void statistics_print(void);
-void pack_in_sys(void);
+void   print_contrl(void);
+void   init(void);
+int    read_params(void);
+void   depart(void);
+void   arrive(void);
+void   time_tick(void);
+void   statistics_print(void);
+void   pack_in_sys(void);
+
+int      add_packet_to_queue(BitPack*);
+BitPack* pop_packet_to_server(void);
+BitPack* send_pack_to_arrive(PackGo*);
+BitPack* get_pack_from_queue(void);
+Queue*   find_queue_of_wfq(void);
+Queue*   find_right_queue(void);
+
+
 
 #endif
