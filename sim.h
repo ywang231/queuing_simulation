@@ -94,8 +94,6 @@ typedef struct  {
     long long      queue_len_acc[3];
     long double    area_time[3];
     long double    total_area_time;
-    long double    total_response_time;
-    long double    response_time[3];
 } Collector;
 
 

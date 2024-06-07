@@ -206,7 +206,6 @@ void init(void)
         cll_.delay_time[i] = 0.0f;
         cll_.area_time[i] = 0.0f;
         cll_.served_byte[i] = 0.0f;
-        cll_.response_time[i] = 0.0l;
         ++i;
     }
     cll_.ctime = 0.0f;
@@ -216,7 +215,6 @@ void init(void)
     cll_.total_area_time = 0;
     cll_.total_delay_time = 0;
     cll_.total_served_byte = 0.0f;
-    cll_.total_response_time = 0.0f;
 }
 
 // Calculate the length of queue for each category
@@ -280,7 +278,7 @@ int statistics_print(void)
     
     char time[100];
     current_date_time(time, 100);
-    fprintf(file,"current time: %s \n", time);
+    fprintf(file,"--------------current time: %s ------------------\n\n", time);
     
     fprintf(file, "total arrived: %ld \n", cll_.arrived[Audio] + cll_.arrived[Video] + cll_.arrived[Data]);
     fprintf(file, "class arrived (audio, video, data) : %ld, %ld, %ld \n",
@@ -328,15 +326,24 @@ int statistics_print(void)
     
     
     // mean delay
+    unsigned long total_served = cll_.served[Audio] + cll_.served[Video] + cll_.served[Data];
+    fprintf(file, "mean delay: %.3Lf \n",cll_.total_delay_time / total_served);
+    
+    fprintf(file, "mean delay (audio, video, data): %.3Lf, %.3Lf, %.3Lf \n",
+            cll_.delay_time[Audio] / cll_.delayed[Audio],
+            cll_.delay_time[Video] / cll_.delayed[Video],
+            cll_.delay_time[Data]  / cll_.delayed[Data]);
     
     
+    unsigned long total_blocked = cll_.dropped[Audio] + cll_.dropped[Video]+ cll_.dropped[Data];
+    unsigned long total_arrived = cll_.arrived[Audio] + cll_.arrived[Video]+ cll_.arrived[Data];
     
-    // mean response
+    fprintf(file, "block ratio %.3Lf \n", total_blocked * 1.0L / total_arrived);
     
-    
-    // block ratio
-    
-    // mean queue length
+    fprintf(file, "block ratio (audio, video, data):%.3Lf, %.3Lf, %.3Lf \n\n",
+            cll_.dropped[Audio] * 1.0L / cll_.arrived[Audio],
+            cll_.dropped[Video] * 1.0L / cll_.arrived[Video],
+            cll_.dropped[Data] * 1.0L / cll_.arrived[Data]);
     
     fclose(file); file = NULL;
     
@@ -600,10 +607,8 @@ void arrive(void)
         
         int res = add_packet_to_queue(pack);
         
-        if (res) 
-        {
+        if (res)
             cll_.arrived[pack->type] += 1;
-        }
         else 
         {
             cll_.dropped[pack->type] += 1;
