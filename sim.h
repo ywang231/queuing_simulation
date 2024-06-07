@@ -15,9 +15,9 @@ typedef enum {
 } QueueMode;
 
 typedef enum {
-    Arrival = 0,
-    Departure,
-    Initialized
+    EArrive = 0,
+    EDepart,
+    EInitialized
 } EventType;
 
 typedef struct BitPack {
@@ -82,16 +82,19 @@ typedef struct  {
     unsigned long  served[3];
     unsigned long  delayed[3];
     unsigned long  dropped[3];
-    unsigned long  left_in_system[3];
+    unsigned long  left_in_sys[3];
     long           out_interval;
     long           internal_acc;
     double         max_time;
     long double    dtime; // Total delayed time
     long double    delay_time[3];
+    long double    total_delay_time;
     long double    res_time[3];
-    
-//    num_t event_num;
-//    lfnum_t class_queue_len[3];
+    long double    total_served_byte;
+    long double    served_byte[3];
+    long           queue_len_acc[3];
+    long double    area_time[3];
+    long double    total_area_time;
 } Collector;
 
 
@@ -101,12 +104,11 @@ typedef struct {
     int       sources[3];     // The number of sources in each type
 } GConfig;
 
-// Only for Weight Fair Queue
+
 typedef struct  {
     SourceType type;
     float      abs_weight;
 } AbsWeight;
-
 
 double expon(double);
 void   print_contrl(void);
@@ -116,7 +118,7 @@ void   depart(void);
 void   arrive(void);
 void   time_tick(void);
 void   statistics_print(void);
-void   pack_in_sys(void);
+void   pack_left_in_sys(void);
 
 int      add_packet_to_queue(BitPack*);
 BitPack* pop_packet_to_server(void);
@@ -125,6 +127,4 @@ BitPack* get_pack_from_queue(void);
 Queue*   find_queue_of_wfq(void);
 Queue*   find_right_queue(void);
 
-
-
-#endif
+#endif // end __SIMULATE_H__
