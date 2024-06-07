@@ -5,7 +5,8 @@
 typedef enum {
     Audio = 0,
     Video,
-    Data
+    Data,
+    Mixed
 } SourceType;
 
 typedef enum {
@@ -86,15 +87,15 @@ typedef struct  {
     long           out_interval;
     long           internal_acc;
     double         max_time;
-    long double    dtime; // Total delayed time
     long double    delay_time[3];
     long double    total_delay_time;
-    long double    res_time[3];
-    long double    total_served_byte;
-    long double    served_byte[3];
-    long           queue_len_acc[3];
+    unsigned long long  total_served_byte;
+    unsigned long long  served_byte[3];
+    long long      queue_len_acc[3];
     long double    area_time[3];
     long double    total_area_time;
+    long double    total_response_time;
+    long double    response_time[3];
 } Collector;
 
 
@@ -117,7 +118,7 @@ int    read_params(void);
 void   depart(void);
 void   arrive(void);
 void   time_tick(void);
-void   statistics_print(void);
+int    statistics_print(void);
 void   pack_left_in_sys(void);
 
 int      add_packet_to_queue(BitPack*);

@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		070E2AC62C124A8000610D94 /* sim.c in Sources */ = {isa = PBXBuildFile; fileRef = 070E2AC52C124A8000610D94 /* sim.c */; };
+		070E2AC92C1362E000610D94 /* input.ini in CopyFiles */ = {isa = PBXBuildFile; fileRef = 070E2AC82C124B7A00610D94 /* input.ini */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -17,6 +18,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 16;
 			files = (
+				070E2AC92C1362E000610D94 /* input.ini in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

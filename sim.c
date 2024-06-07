@@ -17,10 +17,6 @@ Collector cll_;
 
 int main(int argc, char const *argv[]) 
 {
-    time_t t;
-    
-    srand((unsigned)time(&t));
-    
     init();
     
     read_params();
@@ -79,7 +75,7 @@ int read_params(void)
         }
 
         if (sscanf(line,"%[^ \t\n\r\f\v]%*[ \t\n\r\f\v]=%[^\t\n\r\f\v]", key, value) == 2) {
-            printf("Section: %s, key: %s, value: %s", section, key, value);
+            printf("Section: %s, key: %s, value: %s \n", section, key, value);
         }
         // Audio
         SEC_KEY_CMP("Audio", "bps")          bps[Audio] = atoi(value);
@@ -125,7 +121,8 @@ int read_params(void)
     int j, offset = 0;
     for (i = 0; i < type_num; ++i) 
     {
-        for (j = 0; j < source_num[i]; ++j) 
+        gc_.sources[i] = source_num[i];
+        for (j = 0; j < source_num[i]; ++j)
         {
             PackGo* g = gpg_ + offset + j;
             g->pack_num = 0;
@@ -150,7 +147,7 @@ int read_params(void)
     {
         Queue* q = gsys_.queue + i;
         q->max_len = max_queue_len;
-        q->type = (SourceType)i;
+        q->type = (gc_.qmode == QFIFO ? Mixed : (SourceType)i);
         q->len = 0;
         q->pack_head = NULL;
     }
@@ -178,6 +175,10 @@ void print_contrl(void)
 
 void init(void) 
 {
+    time_t t;
+    
+    srand((unsigned)time(&t));
+    
     gpg_ = NULL;
     
     gc_.qmode = QFIFO;
@@ -202,15 +203,20 @@ void init(void)
         cll_.delayed[i] = 0;
         cll_.dropped[i] = 0;
         cll_.left_in_sys[i] = 0;
-        cll_.res_time[i] = 0.0f;
         cll_.delay_time[i] = 0.0f;
+        cll_.area_time[i] = 0.0f;
+        cll_.served_byte[i] = 0.0f;
+        cll_.response_time[i] = 0.0l;
         ++i;
     }
     cll_.ctime = 0.0f;
     cll_.max_time = 0.0f;
-    
     cll_.out_interval = 0;
     cll_.internal_acc = 0;
+    cll_.total_area_time = 0;
+    cll_.total_delay_time = 0;
+    cll_.total_served_byte = 0.0f;
+    cll_.total_response_time = 0.0f;
 }
 
 // Calculate the length of queue for each category
@@ -226,147 +232,115 @@ void accumulated_queue_length(void)
     }
 }
 
-#define FIFO_OUT_FILE   "fifo.txt"
-#define SPQ_OUT_FILE    "spq.txt"
-#define WFQ_OUT_FILE    "wfq.txt"
 
-void statistics_print(void)
+int current_date_time(char* dt, size_t size)
 {
+    time_t now = time(NULL);
+
+    if (now == -1) {
+        perror("Error getting the current time");
+        return EXIT_FAILURE;
+    }
+
+    // Convert the time to a tm structure
+    struct tm *local_time = localtime(&now);
+
+    // Check if the conversion was successful
+    if (local_time == NULL) {
+        perror("Error converting time to local time");
+        return EXIT_FAILURE;
+    }
+
+    // Format the date and time
+    if (strftime(dt, size, "%Y-%m-%d %H:%M:%S", local_time) == 0) {
+        fprintf(stderr, "Error formatting date and time");
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
+}
+
+
+int statistics_print(void)
+{
+    FILE* file = NULL;
+    if ( gc_.qmode == QFIFO ) {
+        file = fopen("fifo.out.txt", "a");
+    }
+    else if (gc_.qmode == QSPQ) {
+        file = fopen("spq_out.txt", "a");
+    }
+    else {
+        file = fopen("wfq_out.txt", "a");
+    }
     
-//    char* mode = "FIFO";
-//    if (_mode_ == SPQ) {
-//        mode = "Strict Priority Queue";
-//    }
-//    else if (_mode_== FIFO) {
-//        mode = "FIFO";
-//    }
-//    else {
-//        mode = "Weight Fair Queue";
-//    }
-//    
-//    printf("----------Mode: %s---------Sim time: %.4f-----------------\n",
-//           mode, _sim_.sim_time);
-//    
-//    printf("Total served packet in kb: %0.4Lf \n", _sim_.total_served_kb);
-//    
-//    
-//    lfnum_t totoal_served_kb = _sim_.total_served_kb <= 0 ? 10 : _sim_.total_served_kb;
-//    printf("Percentage of Served (audio, video, data): %0.4Lf, %0.4Lf, %0.4Lf \n",
-//           _sim_.class_served_kb[AUDIO] / totoal_served_kb,
-//           _sim_.class_served_kb[VIDEO] / totoal_served_kb,
-//           _sim_.class_served_kb[DATA] / totoal_served_kb);
-//
-//    
-//    if (_mode_ != FIFO) {
-//        
-//        printf("Packet arrived (audio, video, data): %ld, %ld, %ld \n",
-//               _sim_.class_arrived[AUDIO],
-//               _sim_.class_arrived[VIDEO],
-//               _sim_.class_arrived[DATA]);
-//        
-//        
-//        printf("Packet served (audio, video, data): %ld, %ld, %ld \n",
-//               _sim_.class_served[AUDIO],
-//               _sim_.class_served[VIDEO],
-//               _sim_.class_served[DATA]);
-//        
-//        printf("Packet delayed (audio, video, data): %ld, %ld, %ld \n",
-//               _sim_.class_delayed[AUDIO],
-//               _sim_.class_delayed[VIDEO],
-//               _sim_.class_delayed[DATA]);
-//        
-//        printf("Package dropped (audio, video, data): %ld, %ld, %ld \n",
-//               _sim_.class_dropped[AUDIO],
-//               _sim_.class_dropped[VIDEO],
-//               _sim_.class_dropped[DATA]);
-//        
-//        printf("Packet remained (audio, video, data): %ld, %ld, %ld \n",
-//               _sim_.class_remained[AUDIO],
-//               _sim_.class_remained[VIDEO],
-//               _sim_.class_remained[DATA]);
-//        
-//        
-//        printf("Packet served in kb (audio, video, data): %0.4Lf, %0.4Lf, %0.4Lf \n",
-//               _sim_.class_served_kb[AUDIO],
-//               _sim_.class_served_kb[VIDEO],
-//               _sim_.class_served_kb[DATA]);
-//        
-//        lfnum_t average_delay[ALLTYPE] = {
-//            _sim_.class_delay_time[AUDIO] / (_sim_.class_delayed[AUDIO] <= 0 ? 10 : _sim_.class_delayed[AUDIO]),
-//            _sim_.class_delay_time[VIDEO] / (_sim_.class_delayed[VIDEO] <= 0 ? 10 : _sim_.class_delayed[VIDEO]),
-//            _sim_.class_delay_time[DATA] / (_sim_.class_delayed[DATA] <= 0 ? 10 : _sim_.class_delayed[DATA])
-//        };
-//        
-//        printf("Average delayed time (audio, video, data) : %.4Lf, %.4Lf, %.4Lf \n",
-//               average_delay[AUDIO],
-//               average_delay[VIDEO],
-//               average_delay[DATA]);
-//        
-//        
-//        printf("Packet blocking ratio (audio, video, data) :  %.4Lf, %.4Lf, %.4Lf \n",
-//               _sim_.class_dropped[AUDIO] * 1.0l / _sim_.class_arrived[AUDIO],
-//               _sim_.class_dropped[VIDEO] * 1.0l / _sim_.class_arrived[VIDEO],
-//               _sim_.class_dropped[DATA] * 1.0l/ _sim_.class_arrived[DATA]);
-//        
-//        
-//        printf("Average response time (audio, video, data): %.4Lf, %.4Lf, %.4Lf \n",
-//               _sim_.class_res_time[AUDIO] / _sim_.class_served[AUDIO],
-//               _sim_.class_res_time[VIDEO] / _sim_.class_served[VIDEO],
-//               _sim_.class_res_time[DATA] / _sim_.class_served[DATA]);
-//        
-//        printf("Response time (audio, video, data): %.4Lf, %.4Lf, %.4Lf \n",
-//               _sim_.class_res_time[AUDIO],
-//               _sim_.class_res_time[VIDEO],
-//               _sim_.class_res_time[DATA]);
-//        
-//        
-//        printf("Average Queue Length in KB (audio, video, data ): %.4Lf, %.4Lf, %.4Lf \n",
-//               _sim_.class_queue_len[AUDIO] / _sim_.event_num,
-//               _sim_.class_queue_len[VIDEO] / _sim_.event_num,
-//               _sim_.class_queue_len[DATA] / _sim_.event_num);
-//        
-//        
-//    }
-//    else {
-//        printf("Packet served : %ld \n",
-//               _sim_.class_served[AUDIO] + _sim_.class_served[VIDEO] + _sim_.class_served[DATA]);
-//        
-//        printf("Packet arrived : %ld \n",
-//               _sim_.class_arrived[AUDIO] + _sim_.class_arrived[VIDEO] + _sim_.class_arrived[DATA]);
-        
-//        printf("Packet delayed : %ld \n",
-//               _sim_.class_delayed[AUDIO] + _sim_.class_delayed[VIDEO] + _sim_.class_delayed[DATA]);
-//        
-//        printf("Package dropped : %ld \n",
-//               _sim_.class_dropped[AUDIO] + _sim_.class_dropped[VIDEO] + _sim_.class_dropped[DATA]);
-//        
-//        printf("Packet remained: %ld \n",
-//               _sim_.class_remained[AUDIO] + _sim_.class_remained[VIDEO] + _sim_.class_remained[DATA]);
-//        
-//        
-//        num_t total_dropped = _sim_.class_dropped[AUDIO] + _sim_.class_dropped[VIDEO] + _sim_.class_dropped[DATA];
-//        num_t total_arrived = _sim_.class_arrived[AUDIO] + _sim_.class_arrived[VIDEO] + _sim_.class_arrived[DATA];
-//        printf("Packet blocking ratio :  %.4Lf \n", total_dropped * 1.0l / total_arrived);
-//        
-//        num_t total_packet_delayed = _sim_.class_delayed[AUDIO] + _sim_.class_delayed[VIDEO] + _sim_.class_delayed[DATA];
-//        
-//        lfnum_t average_delayed_time = total_packet_delayed <= 0 ? 0 :_sim_.total_delay_time / total_packet_delayed;
-//        
-//        printf("Delayed time: %0.4Lf, average dalayed time: %0.4Lf \n",
-//               _sim_.total_delay_time, average_delayed_time);
-//        
-//    
-//        lfnum_t total_res_time = _sim_.class_res_time[AUDIO] + _sim_.class_res_time[VIDEO] + _sim_.class_res_time[DATA];
-//        num_t total_packet_servedd = _sim_.class_served[AUDIO] + _sim_.class_served[VIDEO] + _sim_.class_served[DATA];
-//        printf("Average Response time (total): %.4Lf \n", total_res_time / total_packet_servedd);
-//        
-//        printf("Response time (audio, video, data): %.4Lf \n",total_res_time);
-//        
-//        printf("Average Queue Length in KB: %.4Lf \n",
-//               _sim_.class_queue_len[AUDIO] / _sim_.event_num);
-//        
-//    }
-    printf("\n");
+    if (file == NULL) {
+        perror("Error opening file");
+        return EXIT_FAILURE;
+    }
+    
+    char time[100];
+    current_date_time(time, 100);
+    fprintf(file,"current time: %s \n", time);
+    
+    fprintf(file, "total arrived: %ld \n", cll_.arrived[Audio] + cll_.arrived[Video] + cll_.arrived[Data]);
+    fprintf(file, "class arrived (audio, video, data) : %ld, %ld, %ld \n",
+            cll_.arrived[Audio],
+            cll_.arrived[Video],
+            cll_.arrived[Data]);
+    
+    
+    fprintf(file, "total served in bytes: %lld \n", cll_.total_served_byte);
+    fprintf(file, "ratio of each category served (audio, video, data) : %.3Lf, %.3Lf, %.3Lf \n",
+            cll_.served_byte[Audio] * 1.0L / cll_.total_served_byte,
+            cll_.served_byte[Video] * 1.0L / cll_.total_served_byte,
+            cll_.served_byte[Data] * 1.0L  / cll_.total_served_byte);
+    
+    
+    fprintf(file, "total served in number: %ld \n",
+                   cll_.served[Audio] + cll_.served[Video] + cll_.served[Data]);
+    fprintf(file, "class served in number (audio, video, data): %ld, %ld, %ld \n",
+                   cll_.served[Audio],
+                   cll_.served[Video],
+                   cll_.served[Data]);
+
+    
+    fprintf(file, "total delayed: %ld\n",
+                   cll_.delayed[Audio] + cll_.delayed[Video] + cll_.delayed[Data]);
+    fprintf(file, "class delayed (audio, video, data): %ld, %ld, %ld \n",
+                   cll_.delayed[Audio],
+                   cll_.delayed[Video],
+                   cll_.delayed[Data]);
+    
+    fprintf(file, "total dropped: %ld \n",
+                   cll_.dropped[Audio] + cll_.dropped[Video] + cll_.dropped[Data]);
+    fprintf(file, "class dropped (audio, video, data): %ld, %ld, %ld \n",
+                   cll_.dropped[Audio],
+                   cll_.dropped[Video],
+                   cll_.dropped[Data]);
+    
+    
+    fprintf(file, "total left in system: %ld \n",
+                   cll_.left_in_sys[Audio] + cll_.left_in_sys[Video] + cll_.left_in_sys[Data]);
+    fprintf(file, "class left in system (audio, video, data): %ld, %ld, %ld \n",
+                   cll_.left_in_sys[Audio],
+                   cll_.left_in_sys[Video],
+                   cll_.left_in_sys[Data]);
+    
+    
+    // mean delay
+    
+    
+    
+    // mean response
+    
+    
+    // block ratio
+    
+    // mean queue length
+    
+    fclose(file); file = NULL;
+    
+    return EXIT_SUCCESS;
 }
 
 void pack_left_in_sys(void)
