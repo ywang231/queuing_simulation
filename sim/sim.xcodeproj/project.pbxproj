@@ -7,9 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		075383102C08178E008120FC /* lcgrand.c in Sources */ = {isa = PBXBuildFile; fileRef = 0753830C2C08178E008120FC /* lcgrand.c */; };
-		075383112C08178E008120FC /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 0753830E2C08178E008120FC /* main.c */; };
-		075383122C0817AC008120FC /* config.ini in CopyFiles */ = {isa = PBXBuildFile; fileRef = 0753830D2C08178E008120FC /* config.ini */; };
+		070E2AC62C124A8000610D94 /* sim.c in Sources */ = {isa = PBXBuildFile; fileRef = 070E2AC52C124A8000610D94 /* sim.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -19,19 +17,16 @@
 			dstPath = "";
 			dstSubfolderSpec = 16;
 			files = (
-				075383122C0817AC008120FC /* config.ini in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		070E2AC52C124A8000610D94 /* sim.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sim.c; path = ../sim.c; sourceTree = "<group>"; };
+		070E2AC72C124B1000610D94 /* sim.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = sim.h; path = ../sim.h; sourceTree = "<group>"; };
+		070E2AC82C124B7A00610D94 /* input.ini */ = {isa = PBXFileReference; lastKnownFileType = text; name = input.ini; path = ../input.ini; sourceTree = "<group>"; };
 		075383012C081768008120FC /* sim */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = sim; sourceTree = BUILT_PRODUCTS_DIR; };
-		0753830B2C08178E008120FC /* lcgrand.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = lcgrand.h; path = ../lcgrand.h; sourceTree = "<group>"; };
-		0753830C2C08178E008120FC /* lcgrand.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = lcgrand.c; path = ../lcgrand.c; sourceTree = "<group>"; };
-		0753830D2C08178E008120FC /* config.ini */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = config.ini; path = ../config.ini; sourceTree = "<group>"; };
-		0753830E2C08178E008120FC /* main.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = main.c; path = ../main.c; sourceTree = "<group>"; };
-		0753830F2C08178E008120FC /* datadef.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = datadef.h; path = ../datadef.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -48,11 +43,9 @@
 		075382F82C081768008120FC = {
 			isa = PBXGroup;
 			children = (
-				0753830D2C08178E008120FC /* config.ini */,
-				0753830F2C08178E008120FC /* datadef.h */,
-				0753830C2C08178E008120FC /* lcgrand.c */,
-				0753830B2C08178E008120FC /* lcgrand.h */,
-				0753830E2C08178E008120FC /* main.c */,
+				070E2AC82C124B7A00610D94 /* input.ini */,
+				070E2AC72C124B1000610D94 /* sim.h */,
+				070E2AC52C124A8000610D94 /* sim.c */,
 				075383022C081768008120FC /* Products */,
 			);
 			sourceTree = "<group>";
@@ -122,8 +115,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				075383112C08178E008120FC /* main.c in Sources */,
-				075383102C08178E008120FC /* lcgrand.c in Sources */,
+				070E2AC62C124A8000610D94 /* sim.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
