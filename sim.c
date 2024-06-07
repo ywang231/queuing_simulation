@@ -17,11 +17,13 @@ Collector cll_;
 
 int main(int argc, char const *argv[]) 
 {
+    time_t t;
+    
+    srand((unsigned)time(&t));
+    
     init();
     
     read_params();
-    
-    srand((unsigned)time(NULL));
     
     while (cll_.ctime <= cll_.max_time)
     {
@@ -168,7 +170,7 @@ int read_params(void)
 
 double expon(double mean) 
 {
-    return -mean * log(rand(100) * 1.0f / 100);
+    return -mean * log(rand(RAND_MAX) * 1.0f / RAND_MAX);
 }
 
 void print_contrl(void) 
