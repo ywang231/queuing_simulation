@@ -110,7 +110,9 @@ int read_params(void)
     
     if (f) fclose(f); f = NULL;
     
-    gsys_.queue = (Queue*)(gc_.qmode == QFIFO ? malloc(sizeof(Queue)) : malloc(sizeof(Queue) * type_num));
+    gsys_.queue = (Queue*)(gc_.qmode == QFIFO ? 
+                           malloc(sizeof(Queue)) :
+                           malloc(sizeof(Queue) * type_num));
     
     // Initialize all the source generator
     int i, total_source = 0;
@@ -146,7 +148,7 @@ int read_params(void)
     for (i = 0; i < queue_num; ++i) 
     {
         Queue* q = gsys_.queue + i;
-        q->max_len = max_queue_len;
+        q->max_len = (max_queue_len / queue_num);
         q->type = (gc_.qmode == QFIFO ? Mixed : (SourceType)i);
         q->len = 0;
         q->pack_head = NULL;
@@ -180,8 +182,6 @@ void init(void)
     srand((unsigned)time(&t));
     
     gpg_ = NULL;
-    
-    gc_.qmode = QFIFO;
     
     cll_.internal_acc = 0;
     
@@ -268,6 +268,7 @@ int statistics_print(void)
         file = fopen("spq_out.txt", "a");
     }
     else {
+//        file = fopen("/Users/eric/Desktop/wfq_out.txt", "a");
         file = fopen("wfq_out.txt", "a");
     }
     
@@ -392,7 +393,7 @@ int add_packet_to_queue(BitPack* p)
     }
     
     // Queue reaches its capacity
-    if (target_to_add->len == target_to_add->max_len) 
+    if (target_to_add->len >= target_to_add->max_len)
     {
         p->dropped = 1;
         return 0;
@@ -407,10 +408,7 @@ int add_packet_to_queue(BitPack* p)
     else 
     {
         BitPack* cur = target_to_add->pack_head;
-        while (cur->next != NULL) 
-        {
-            cur = cur->next;
-        }
+        while (cur->next != NULL) cur = cur->next;
         cur->next = p;
         target_to_add->len += 1;
     }
@@ -430,7 +428,7 @@ Queue* find_queue_of_wfq(void) {
     AbsWeight off_weight[type_num];
     
     long double served_total_byte = cll_.total_served_byte;
-    if (cll_.served <= 0) served_total_byte = 1.0f;
+    if (served_total_byte <= 0) served_total_byte = 1.0f;
     
     int i;
     for (i = 0; i < type_num; ++i) 
@@ -443,7 +441,8 @@ Queue* find_queue_of_wfq(void) {
     qsort(off_weight, type_num, sizeof(AbsWeight), abs_cmp);
     
     Queue* q = gsys_.queue;
-    while (i < type_num) 
+    i = 0;
+    while (i < type_num)
     {
         Queue* cq = q + off_weight[i].type;
         if (cq->pack_head) 
@@ -607,9 +606,9 @@ void arrive(void)
         
         int res = add_packet_to_queue(pack);
         
-        if (res)
-            cll_.arrived[pack->type] += 1;
-        else 
+        cll_.arrived[pack->type] += 1;
+        
+        if (res == 0)
         {
             cll_.dropped[pack->type] += 1;
             free(pack);
